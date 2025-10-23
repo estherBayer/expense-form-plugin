@@ -20,6 +20,8 @@ jQuery(document).ready(function($) {
         }
     };
 
+    const STRINGS = (typeof nbnu_ajax !== 'undefined' && nbnu_ajax.strings) ? nbnu_ajax.strings : {};
+
     let isOutOfProvince = false;
 
     // Initialize date pickers
@@ -262,7 +264,7 @@ $('input[name*="LTD_or_WHSCC"]').on('change', calculateTotalHours);
             if (!$field.val() || !$field.val().trim()) {
                 $field.addClass($field.is('select') ? 'nbnu-form-validation-error-select' : 'nbnu-form-validation-error');
                 if (!$field.is('select')) {
-                    $field.attr('placeholder', 'This field is required.');
+                    $field.attr('placeholder', STRINGS.requiredField || 'This field is required.');
                 }
                 isValid = false;
             }
@@ -274,7 +276,7 @@ $('input[name*="LTD_or_WHSCC"]').on('change', calculateTotalHours);
             const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!email || !emailPattern.test(email)) {
                 $('#form_provincial_or_local_office_email').addClass('nbnu-form-validation-error');
-                $('#form_provincial_or_local_office_email').attr('placeholder', 'Please enter a valid email');
+                $('#form_provincial_or_local_office_email').attr('placeholder', STRINGS.invalidEmail || 'Please enter a valid email');
                 isValid = false;
             }
         }
@@ -292,7 +294,11 @@ $('input[name*="LTD_or_WHSCC"]').on('change', calculateTotalHours);
     // Clear validation errors on focus
     $('input, select, textarea').on('focus', function() {
         $(this).removeClass('nbnu-form-validation-error nbnu-form-validation-error-select');
-        if ($(this).attr('placeholder') === 'This field is required.' || $(this).attr('placeholder') === 'Please enter a valid email') {
+        const placeholdersToClear = [
+            STRINGS.requiredField || 'This field is required.',
+            STRINGS.invalidEmail || 'Please enter a valid email'
+        ];
+        if (placeholdersToClear.includes($(this).attr('placeholder'))) {
             $(this).removeAttr('placeholder');
         }
     });
@@ -302,16 +308,16 @@ $('input[name*="LTD_or_WHSCC"]').on('change', calculateTotalHours);
         e.preventDefault();
         
         if (!validateForm()) {
-            $('#nbnu-global-error-message').removeClass('nbnu-hidden');
+            $('#nbnu-global-error-message').text(STRINGS.globalError || $('#nbnu-global-error-message').text()).removeClass('nbnu-hidden');
             $('html, body').animate({
                 scrollTop: $('#nbnu-global-error-message').offset().top - 100
             }, 500);
             return;
         }
-        
+
         $('#nbnu-global-error-message').addClass('nbnu-hidden');
         $('#nbnu-spinning-icon-confirmation').show();
-        $('#nbnu-form-submit').prop('disabled', true).text('Submitting...');
+        $('#nbnu-form-submit').prop('disabled', true).text(STRINGS.submitting || 'Submitting...');
         
         // Prepare form data
         const formData = new FormData(this);
@@ -339,7 +345,7 @@ $('input[name*="LTD_or_WHSCC"]').on('change', calculateTotalHours);
             contentType: false,
             success: function(response) {
                 $('#nbnu-spinning-icon-confirmation').hide();
-                $('#nbnu-form-submit').prop('disabled', false).text('Submit');
+                $('#nbnu-form-submit').prop('disabled', false).text(STRINGS.submit || 'Submit');
                 
                 if (response.success) {
                     $('#nbnu-confirmation-message').text(response.data.message).removeClass('nbnu-hidden');
@@ -357,13 +363,13 @@ $('input[name*="LTD_or_WHSCC"]').on('change', calculateTotalHours);
                         $('#nbnu-confirmation-message').addClass('nbnu-hidden');
                     }, 10000);
                 } else {
-                    $('#nbnu-global-error-message').text('There was an error submitting your form. Please try again.').removeClass('nbnu-hidden');
+                    $('#nbnu-global-error-message').text(STRINGS.genericError || 'There was an error submitting your form. Please try again.').removeClass('nbnu-hidden');
                 }
             },
             error: function() {
                 $('#nbnu-spinning-icon-confirmation').hide();
-                $('#nbnu-form-submit').prop('disabled', false).text('Submit');
-                $('#nbnu-global-error-message').text('There was an error submitting your form. Please try again.').removeClass('nbnu-hidden');
+                $('#nbnu-form-submit').prop('disabled', false).text(STRINGS.submit || 'Submit');
+                $('#nbnu-global-error-message').text(STRINGS.genericError || 'There was an error submitting your form. Please try again.').removeClass('nbnu-hidden');
             }
         });
     });
@@ -458,22 +464,20 @@ function updateRowVisibility() {
     }
 }
 
-// On page load, hide all individual cells' content
-$('.nbnu-day-off-section').addClass('nbnu-hidden');
-$('.nbnu-ltd-section').addClass('nbnu-hidden');
+    // On page load, hide all individual cells' content
+    $('.nbnu-day-off-section').addClass('nbnu-hidden');
+    $('.nbnu-ltd-section').addClass('nbnu-hidden');
 
-}); // This closes jQuery(document).ready(function($) {
+    $('#form-files').on('change', function() {
+        const files = this.files;
+        const $preview = $('#nbnu-uploaded-files-preview');
+        $preview.empty();
 
-// File upload preview
-$('#form-files').on('change', function() {
-    const files = this.files;
-    const $preview = $('#nbnu-uploaded-files-preview');
-    $preview.empty();
-    
-    if (files.length > 0) {
-        $preview.append('<h4>Selected Files:</h4>');
-        Array.from(files).forEach(file => {
-            $preview.append(`<p>📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)</p>`);
-        });
-    }
-});
+        if (files.length > 0) {
+            $preview.append(`<h4>${STRINGS.selectedFiles || 'Selected Files:'}</h4>`);
+            Array.from(files).forEach(file => {
+                $preview.append(`<p>📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)</p>`);
+            });
+        }
+    });
+}); // end document ready

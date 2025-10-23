@@ -3,227 +3,252 @@
  * NBNU Form Admin Detail View Template
  * Displays individual form submission details
  */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+$day_keys = [ 'sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat' ];
+$day_names = [
+    'sun' => __( 'Sunday', 'nbnu-expense-form' ),
+    'mon' => __( 'Monday', 'nbnu-expense-form' ),
+    'tue' => __( 'Tuesday', 'nbnu-expense-form' ),
+    'wed' => __( 'Wednesday', 'nbnu-expense-form' ),
+    'thu' => __( 'Thursday', 'nbnu-expense-form' ),
+    'fri' => __( 'Friday', 'nbnu-expense-form' ),
+    'sat' => __( 'Saturday', 'nbnu-expense-form' ),
+];
+
+$submission_date = ! empty( $submission['submission_date'] )
+    ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $submission['submission_date'] ) )
+    : '';
 ?>
 
 <div class="wrap">
-    <h1>NBNU Form Submission #<?php echo esc_html($submission->id); ?></h1>
-    
+    <h1><?php printf( esc_html__( 'NBNU Form Submission #%d', 'nbnu-expense-form' ), (int) $submission['id'] ); ?></h1>
+
     <div class="submission-meta">
-        <p><strong>Submitted:</strong> <?php echo esc_html(date('F j, Y g:i A', strtotime($submission->submission_date))); ?></p>
-        <p><strong>Status:</strong> 
-            <span class="status-badge status-<?php echo esc_attr($submission->status); ?>">
-                <?php echo esc_html(ucfirst($submission->status)); ?>
+        <p><strong><?php esc_html_e( 'Submitted:', 'nbnu-expense-form' ); ?></strong> <?php echo esc_html( $submission_date ); ?></p>
+        <p><strong><?php esc_html_e( 'Status:', 'nbnu-expense-form' ); ?></strong>
+            <span class="status-badge status-<?php echo esc_attr( $submission['status'] ); ?>">
+                <?php echo esc_html( nbnu_expense_get_status_label( $submission['status'] ) ); ?>
             </span>
         </p>
     </div>
 
     <div class="submission-details">
-        <h2>Personal Information</h2>
+        <h2><?php esc_html_e( 'Personal Information', 'nbnu-expense-form' ); ?></h2>
         <table class="form-table">
             <tr>
-                <th>Name:</th>
-                <td><?php echo esc_html($form_data['name'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Name:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_name'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Meeting:</th>
-                <td><?php echo esc_html($form_data['meeting'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Meeting:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_meeting'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Dates:</th>
-                <td><?php echo esc_html($form_data['dates'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Dates:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_dates'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Address:</th>
-                <td><?php echo esc_html($form_data['address'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Address:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_address'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Employer:</th>
-                <td><?php echo esc_html($form_data['employer'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Employer:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_employer'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Classification:</th>
-                <td><?php echo esc_html($form_data['classification'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Classification:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_classifications'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Hourly Rate:</th>
-                <td><?php echo esc_html($form_data['hourly_rate'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Hourly Rate:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_hourly_rate'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Out of Province:</th>
-                <td><?php echo esc_html($form_data['out_of_province'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Out of Province:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_meeting_out_of_province'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Date of Birth:</th>
-                <td><?php echo esc_html(($form_data['dob_month'] ?? '') . '/' . ($form_data['dob_day'] ?? '') . '/' . ($form_data['dob_year'] ?? '')); ?></td>
+                <th><?php esc_html_e( 'Date of Birth:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( implode( '/', array_filter( [ $form_data['date_month'] ?? '', $form_data['date_day'] ?? '', $form_data['date_year'] ?? '' ] ) ) ); ?></td>
             </tr>
-            <?php if (!empty($form_data['local_office_email'])): ?>
+            <?php if ( ! empty( $form_data['form_provincial_or_local_office_email'] ) ) : ?>
             <tr>
-                <th>Local Office Email:</th>
-                <td><?php echo esc_html($form_data['local_office_email']); ?></td>
+                <th><?php esc_html_e( 'Local Office Email:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_provincial_or_local_office_email'] ); ?></td>
             </tr>
             <?php endif; ?>
         </table>
 
-        <h2>Daily Breakdown</h2>
+        <h2><?php esc_html_e( 'Daily Breakdown', 'nbnu-expense-form' ); ?></h2>
         <table class="widefat">
             <thead>
                 <tr>
-                    <th>Day</th>
-                    <th>Date</th>
-                    <th>Travel Hours</th>
-                    <th>Meeting Hours</th>
-                    <th>Employer Billing</th>
-                    <th>Day Off</th>
-                    <th>LTD/WHSCC</th>
-                    <th>KMs</th>
-                    <th>Meals</th>
+                    <th><?php esc_html_e( 'Day', 'nbnu-expense-form' ); ?></th>
+                    <th><?php esc_html_e( 'Date', 'nbnu-expense-form' ); ?></th>
+                    <th><?php esc_html_e( 'Travel Hours', 'nbnu-expense-form' ); ?></th>
+                    <th><?php esc_html_e( 'Meeting Hours', 'nbnu-expense-form' ); ?></th>
+                    <th><?php esc_html_e( 'Employer Billing', 'nbnu-expense-form' ); ?></th>
+                    <th><?php esc_html_e( 'Day Off', 'nbnu-expense-form' ); ?></th>
+                    <th><?php esc_html_e( 'LTD/WHSCC', 'nbnu-expense-form' ); ?></th>
+                    <th><?php esc_html_e( 'KMs', 'nbnu-expense-form' ); ?></th>
+                    <th><?php esc_html_e( 'Meals', 'nbnu-expense-form' ); ?></th>
                 </tr>
             </thead>
             <tbody>
-                <?php 
-                $days_full = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                $days_short = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-                
-                foreach ($days_short as $index => $day): 
-                    if (!empty($form_data[$day]['date'])):
-                ?>
+                <?php foreach ( $day_keys as $day_key ) :
+                    $date_value = $form_data[ 'form_' . $day_key . '_date' ] ?? '';
+                    if ( '' === $date_value ) {
+                        continue;
+                    }
+
+                    $travel_hours = $form_data[ 'form_' . $day_key . '_hours_travel' ] ?? '0';
+                    $meeting_hours = $form_data[ 'form_' . $day_key . '_hours_meeting' ] ?? '0';
+                    $billing = $form_data[ 'form_' . $day_key . '_employer_billing_NBNU' ] ?? __( 'No', 'nbnu-expense-form' );
+                    $day_off = $form_data[ 'form_' . $day_key . '_day_off' ] ?? '';
+                    $ltd = $form_data[ 'form_' . $day_key . '_LTD_or_WHSCC' ] ?? '';
+                    $manual_km = $form_data[ 'form_' . $day_key . '_kms_manual' ] ?? '';
+                    $dropdown_km = $form_data[ 'form_' . $day_key . '_kms_own_vehicle' ] ?? '';
+                    $round_trip = $form_data[ 'form_' . $day_key . '_round_trip' ] ?? '';
+
+                    $kms_value = $manual_km !== '' ? $manual_km : $dropdown_km;
+                    if ( '' !== $kms_value && 'on' === $round_trip ) {
+                        $kms_value .= ' (' . __( 'Round Trip', 'nbnu-expense-form' ) . ')';
+                    }
+
+                    $meals = [];
+                    if ( 'on' === ( $form_data[ 'form_' . $day_key . '_meal_breakfast' ] ?? '' ) ) {
+                        $meals[] = __( 'B', 'nbnu-expense-form' );
+                    }
+                    if ( 'on' === ( $form_data[ 'form_' . $day_key . '_meal_lunch' ] ?? '' ) ) {
+                        $meals[] = __( 'L', 'nbnu-expense-form' );
+                    }
+                    if ( 'on' === ( $form_data[ 'form_' . $day_key . '_meal_supper' ] ?? '' ) ) {
+                        $meals[] = __( 'S', 'nbnu-expense-form' );
+                    }
+                    ?>
                     <tr>
-                        <td><?php echo esc_html($days_full[$index]); ?></td>
-                        <td><?php echo esc_html($form_data[$day]['date'] ?? ''); ?></td>
-                        <td><?php echo esc_html($form_data[$day]['hours_travel'] ?? '0'); ?></td>
-                        <td><?php echo esc_html($form_data[$day]['hours_meeting'] ?? '0'); ?></td>
-                        <td><?php echo esc_html($form_data[$day]['employer_billing'] ?? 'No'); ?></td>
-                        <td><?php echo esc_html($form_data[$day]['day_off'] ?? 'Yes'); ?></td>
-                        <td><?php echo esc_html($form_data[$day]['ltd_whscc'] ?? 'Yes'); ?></td>
-                        <td>
-                            <?php 
-                            $kms = $form_data[$day]['kms'] ?? $form_data[$day]['kms_manual'] ?? '0';
-                            $round_trip = ($form_data[$day]['round_trip'] ?? 'no') === 'yes' ? ' (Round Trip)' : '';
-                            echo esc_html($kms . $round_trip);
-                            ?>
-                        </td>
-                        <td>
-                            <?php
-                            $meals = [];
-                            if (($form_data[$day]['meal_breakfast'] ?? 'no') === 'yes') $meals[] = 'B';
-                            if (($form_data[$day]['meal_lunch'] ?? 'no') === 'yes') $meals[] = 'L';
-                            if (($form_data[$day]['meal_supper'] ?? 'no') === 'yes') $meals[] = 'S';
-                            echo esc_html(implode(', ', $meals));
-                            ?>
-                        </td>
+                        <td><?php echo esc_html( $day_names[ $day_key ] ); ?></td>
+                        <td><?php echo esc_html( $date_value ); ?></td>
+                        <td><?php echo esc_html( $travel_hours ); ?></td>
+                        <td><?php echo esc_html( $meeting_hours ); ?></td>
+                        <td><?php echo esc_html( $billing ); ?></td>
+                        <td><?php echo esc_html( $day_off ?: __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
+                        <td><?php echo esc_html( $ltd ?: __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
+                        <td><?php echo esc_html( $kms_value ?: __( '0', 'nbnu-expense-form' ) ); ?></td>
+                        <td><?php echo esc_html( implode( ', ', $meals ) ); ?></td>
                     </tr>
-                <?php 
-                    endif;
-                endforeach; 
-                ?>
+                <?php endforeach; ?>
             </tbody>
         </table>
 
-        <h2>Travel Information</h2>
+        <h2><?php esc_html_e( 'Travel Information', 'nbnu-expense-form' ); ?></h2>
         <table class="form-table">
             <tr>
-                <th>Used Own Car:</th>
-                <td><?php echo esc_html($form_data['use_own_car'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Used Own Car:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_use_own_car'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Travelled From:</th>
-                <td><?php echo esc_html($form_data['travelled_from'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Travelled From:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_travelled_from'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Travelled To:</th>
-                <td><?php echo esc_html($form_data['travelled_to'] ?? 'N/A'); ?></td>
+                <th><?php esc_html_e( 'Travelled To:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_travelled_to'] ?? __( 'N/A', 'nbnu-expense-form' ) ); ?></td>
             </tr>
             <tr>
-                <th>Manual KM Entry:</th>
-                <td><?php echo esc_html($form_data['manual_km_entry'] ?? 'no'); ?></td>
+                <th><?php esc_html_e( 'Manual KM Entry:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( 'on' === ( $form_data['form_travel_destination_fredericton'] ?? '' ) ? __( 'Yes', 'nbnu-expense-form' ) : __( 'No', 'nbnu-expense-form' ) ); ?></td>
             </tr>
         </table>
 
-        <h2>Accommodation & Expenses</h2>
+        <h2><?php esc_html_e( 'Accommodation & Expenses', 'nbnu-expense-form' ); ?></h2>
         <table class="form-table">
             <tr>
-                <th>Hotel Nights:</th>
-                <td><?php echo esc_html($form_data['hotel_nights'] ?? '0'); ?></td>
+                <th><?php esc_html_e( 'Hotel Nights:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_hotel_number_nights'] ?? '0' ); ?></td>
             </tr>
             <tr>
-                <th>Hotel Rate per Night:</th>
-                <td><?php echo esc_html($form_data['hotel_rate'] ?? '$0.00'); ?></td>
+                <th><?php esc_html_e( 'Hotel Rate per Night:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_hotel_night_rates'] ?? '$0.00' ); ?></td>
             </tr>
             <tr>
-                <th>Private Accommodation Nights:</th>
-                <td><?php echo esc_html($form_data['private_nights'] ?? '0'); ?></td>
+                <th><?php esc_html_e( 'Private Accommodation Nights:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_private_acc_number_nights'] ?? '0' ); ?></td>
             </tr>
             <tr>
-                <th>Other Expenses:</th>
-                <td><?php echo esc_html($form_data['other_expenses'] ?? '$0.00'); ?></td>
+                <th><?php esc_html_e( 'Other Expenses:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_parking_taxi_etc'] ?? '$0.00' ); ?></td>
             </tr>
         </table>
 
-        <h2>Calculated Totals</h2>
+        <h2><?php esc_html_e( 'Calculated Totals', 'nbnu-expense-form' ); ?></h2>
         <table class="form-table">
             <tr>
-                <th>Total Hours (Travel + Meeting):</th>
-                <td><?php echo esc_html($form_data['calc_total_hours'] ?? '0.00'); ?></td>
+                <th><?php esc_html_e( 'Total Hours (Travel + Meeting):', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_calc_total_hours_travel_meeting'] ?? '0.00' ); ?></td>
             </tr>
             <tr>
-                <th>Hours Billed by Employer:</th>
-                <td><?php echo esc_html($form_data['calc_billed_hours'] ?? '0.00'); ?></td>
+                <th><?php esc_html_e( 'Hours Billed by Employer:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_calc_Less_hours_billed_by_employer'] ?? '0.00' ); ?></td>
             </tr>
             <tr>
-                <th>Hours Paid:</th>
-                <td><?php echo esc_html($form_data['calc_paid_hours'] ?? '0.00'); ?></td>
+                <th><?php esc_html_e( 'Hours Paid:', 'nbnu-expense-form' ); ?></th>
+                <td><?php echo esc_html( $form_data['form_calc_hours_paid'] ?? '0.00' ); ?></td>
             </tr>
             <tr>
-                <th>Final Hours Payment:</th>
-                <td><strong><?php echo esc_html($form_data['calc_final_pay'] ?? '$0.00'); ?></strong></td>
+                <th><?php esc_html_e( 'Final Hours Payment:', 'nbnu-expense-form' ); ?></th>
+                <td><strong><?php echo esc_html( $form_data['form_calc_final_hours_paid'] ?? '$0.00' ); ?></strong></td>
             </tr>
             <tr>
-                <th>Mileage Total:</th>
-                <td><strong><?php echo esc_html($form_data['calc_mileage'] ?? '$0.00'); ?></strong></td>
+                <th><?php esc_html_e( 'Mileage Total:', 'nbnu-expense-form' ); ?></th>
+                <td><strong><?php echo esc_html( $form_data['form_calc_total_kms_using_own_vehicle'] ?? '$0.00' ); ?></strong></td>
             </tr>
             <tr>
-                <th>Meals Total:</th>
-                <td><strong><?php echo esc_html($form_data['calc_meals'] ?? '$0.00'); ?></strong></td>
+                <th><?php esc_html_e( 'Meals Total:', 'nbnu-expense-form' ); ?></th>
+                <td><strong><?php echo esc_html( $form_data['form_calc_meals_total'] ?? '$0.00' ); ?></strong></td>
             </tr>
             <tr>
-                <th>Hotel Total:</th>
-                <td><strong><?php echo esc_html($form_data['calc_hotel'] ?? '$0.00'); ?></strong></td>
+                <th><?php esc_html_e( 'Hotel Total:', 'nbnu-expense-form' ); ?></th>
+                <td><strong><?php echo esc_html( $form_data['form_calc_hotels_acc_total'] ?? '$0.00' ); ?></strong></td>
             </tr>
             <tr>
-                <th>Private Accommodation Total:</th>
-                <td><strong><?php echo esc_html($form_data['calc_private'] ?? '$0.00'); ?></strong></td>
+                <th><?php esc_html_e( 'Private Accommodation Total:', 'nbnu-expense-form' ); ?></th>
+                <td><strong><?php echo esc_html( $form_data['form_calc_private_acc_total'] ?? '$0.00' ); ?></strong></td>
             </tr>
             <tr>
-                <th>Other Expenses Total:</th>
-                <td><strong><?php echo esc_html($form_data['calc_other'] ?? '$0.00'); ?></strong></td>
+                <th><?php esc_html_e( 'Other Expenses Total:', 'nbnu-expense-form' ); ?></th>
+                <td><strong><?php echo esc_html( $form_data['form_calc_others_total'] ?? '$0.00' ); ?></strong></td>
             </tr>
             <tr style="border-top: 2px solid #ddd;">
-                <th style="font-size: 1.2em;">GRAND TOTAL:</th>
-                <td style="font-size: 1.2em;"><strong><?php echo esc_html($form_data['calc_grand_total'] ?? '$0.00'); ?></strong></td>
+                <th style="font-size: 1.2em;"><?php esc_html_e( 'GRAND TOTAL:', 'nbnu-expense-form' ); ?></th>
+                <td style="font-size: 1.2em;"><strong><?php echo esc_html( $form_data['form_calc_total_salary_expense_paid'] ?? '$0.00' ); ?></strong></td>
             </tr>
         </table>
 
-        <?php if (!empty($form_data['comments'])): ?>
-        <h2>Comments</h2>
-        <div class="comments-box">
-            <?php echo nl2br(esc_html($form_data['comments'])); ?>
-        </div>
+        <?php if ( ! empty( $form_data['form_comments'] ) ) : ?>
+            <h2><?php esc_html_e( 'Comments', 'nbnu-expense-form' ); ?></h2>
+            <div class="comments-box">
+                <?php echo nl2br( esc_html( $form_data['form_comments'] ) ); ?>
+            </div>
         <?php endif; ?>
 
-        <?php if (!empty($form_data['uploaded_files'])): ?>
-        <h2>Uploaded Files</h2>
-        <ul>
-            <?php foreach ($form_data['uploaded_files'] as $file_url): ?>
-                <li><a href="<?php echo esc_url($file_url); ?>" target="_blank"><?php echo esc_html(basename($file_url)); ?></a></li>
-            <?php endforeach; ?>
-        </ul>
+        <?php if ( ! empty( $form_data['uploaded_files'] ) && is_array( $form_data['uploaded_files'] ) ) : ?>
+            <h2><?php esc_html_e( 'Uploaded Files', 'nbnu-expense-form' ); ?></h2>
+            <ul>
+                <?php foreach ( $form_data['uploaded_files'] as $file_url ) : ?>
+                    <li><a href="<?php echo esc_url( $file_url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( basename( $file_url ) ); ?></a></li>
+                <?php endforeach; ?>
+            </ul>
         <?php endif; ?>
     </div>
 
     <div class="submission-actions">
-        <a href="<?php echo esc_url(admin_url('admin.php?page=nbnu-form-submissions')); ?>" class="button">← Back to All Submissions</a>
-        <button type="button" class="button button-primary" onclick="window.print()">Print</button>
-        <a href="<?php echo esc_url(admin_url('admin.php?page=nbnu-form-submissions&action=export&id=' . $submission->id)); ?>" class="button">Export PDF</a>
+        <a href="<?php echo esc_url( admin_url( 'admin.php?page=nbnu-expense-admin' ) ); ?>" class="button">&larr; <?php esc_html_e( 'Back to All Submissions', 'nbnu-expense-form' ); ?></a>
+        <button type="button" class="button button-primary" onclick="window.print()"><?php esc_html_e( 'Print', 'nbnu-expense-form' ); ?></button>
     </div>
 </div>
 
@@ -289,10 +314,12 @@
 }
 
 @media print {
-    .submission-actions, .wp-admin, #wpadminbar {
+    .submission-actions,
+    .wp-admin,
+    #wpadminbar {
         display: none !important;
     }
-    
+
     .wrap {
         margin: 0 !important;
     }
