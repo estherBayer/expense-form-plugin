@@ -502,11 +502,11 @@ function nbnu_expense_send_admin_notification( $post_id, $form_data, $submission
         [ __( 'Member Name', 'nbnu-expense-form' ), $name ],
         [ __( 'Meeting Name', 'nbnu-expense-form' ), $meeting ],
         [ __( 'Hours Paid', 'nbnu-expense-form' ), $form_data['form_calc_hours_paid'] ?? '' ],
-        [ __( 'Mileage Total', 'nbnu-expense-form' ), $form_data['form_calc_total_kms_using_own_vehicle'] ?? '' ],
-        [ __( 'Meals Total', 'nbnu-expense-form' ), $form_data['form_calc_meals_total'] ?? '' ],
-        [ __( 'Hotel Total', 'nbnu-expense-form' ), $form_data['form_calc_hotels_acc_total'] ?? '' ],
-        [ __( 'Private Accommodation Total', 'nbnu-expense-form' ), $form_data['form_calc_private_acc_total'] ?? '' ],
-        [ __( 'Other Expenses', 'nbnu-expense-form' ), $form_data['form_calc_others_total'] ?? '' ],
+        [ __( 'Mileage Total', 'nbnu-expense-form' ), nbnu_expense_format_currency( $form_data['form_calc_total_kms_using_own_vehicle'] ?? '' ) ],
+        [ __( 'Meals Total', 'nbnu-expense-form' ), nbnu_expense_format_currency( $form_data['form_calc_meals_total'] ?? '' ) ],
+        [ __( 'Hotel Total', 'nbnu-expense-form' ), nbnu_expense_format_currency( $form_data['form_calc_hotels_acc_total'] ?? '' ) ],
+        [ __( 'Private Accommodation Total', 'nbnu-expense-form' ), nbnu_expense_format_currency( $form_data['form_calc_private_acc_total'] ?? '' ) ],
+        [ __( 'Other Expenses', 'nbnu-expense-form' ), nbnu_expense_format_currency( $form_data['form_calc_others_total'] ?? '' ) ],
         [ __( 'Grand Total', 'nbnu-expense-form' ), $total ],
     ];
 
@@ -520,17 +520,116 @@ function nbnu_expense_send_admin_notification( $post_id, $form_data, $submission
         );
     }
 
-    $table = sprintf( '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:16px 0;width:100%%;">%s</table>', $table_rows );
+    $summary_table = sprintf( '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:16px 0;width:100%%;">%s</table>', $table_rows );
+
+    $day_rows   = '';
+    $day_labels = [
+        'sun' => __( 'Sunday', 'nbnu-expense-form' ),
+        'mon' => __( 'Monday', 'nbnu-expense-form' ),
+        'tue' => __( 'Tuesday', 'nbnu-expense-form' ),
+        'wed' => __( 'Wednesday', 'nbnu-expense-form' ),
+        'thu' => __( 'Thursday', 'nbnu-expense-form' ),
+        'fri' => __( 'Friday', 'nbnu-expense-form' ),
+        'sat' => __( 'Saturday', 'nbnu-expense-form' ),
+    ];
+
+    foreach ( nbnu_expense_get_day_keys() as $day_key ) {
+        $date_value = $form_data[ 'form_' . $day_key . '_date' ] ?? '';
+
+        if ( '' === $date_value ) {
+            continue;
+        }
+
+        $travel_hours = $form_data[ 'form_' . $day_key . '_hours_travel' ] ?? '';
+        $meeting_hours = $form_data[ 'form_' . $day_key . '_hours_meeting' ] ?? '';
+        $billing = $form_data[ 'form_' . $day_key . '_employer_billing_NBNU' ] ?? '';
+        $day_off = $form_data[ 'form_' . $day_key . '_day_off' ] ?? '';
+        $ltd = $form_data[ 'form_' . $day_key . '_LTD_or_WHSCC' ] ?? '';
+        $kms_manual = $form_data[ 'form_' . $day_key . '_kms_manual' ] ?? '';
+        $kms_dropdown = $form_data[ 'form_' . $day_key . '_kms_own_vehicle' ] ?? '';
+        $round_trip = $form_data[ 'form_' . $day_key . '_round_trip' ] ?? '';
+
+        $km_display = '' !== $kms_manual ? $kms_manual : $kms_dropdown;
+
+        if ( '' !== $km_display && 'on' === $round_trip ) {
+            $km_display .= ' (' . __( 'Round Trip', 'nbnu-expense-form' ) . ')';
+        }
+
+        $meal_labels = [];
+
+        if ( 'on' === ( $form_data[ 'form_' . $day_key . '_meal_breakfast' ] ?? '' ) ) {
+            $meal_labels[] = __( 'Breakfast', 'nbnu-expense-form' );
+        }
+
+        if ( 'on' === ( $form_data[ 'form_' . $day_key . '_meal_lunch' ] ?? '' ) ) {
+            $meal_labels[] = __( 'Lunch', 'nbnu-expense-form' );
+        }
+
+        if ( 'on' === ( $form_data[ 'form_' . $day_key . '_meal_supper' ] ?? '' ) ) {
+            $meal_labels[] = __( 'Supper', 'nbnu-expense-form' );
+        }
+
+        $meals_display = implode( ', ', $meal_labels );
+
+        if ( '' === $km_display ) {
+            $km_display = __( 'N/A', 'nbnu-expense-form' );
+        }
+
+        if ( '' === $meals_display ) {
+            $meals_display = __( 'None', 'nbnu-expense-form' );
+        }
+
+        $day_rows .= sprintf(
+            '<tr>' .
+                '<td style="padding:6px 12px;border:1px solid #ddd;">%s</td>' .
+                '<td style="padding:6px 12px;border:1px solid #ddd;">%s</td>' .
+                '<td style="padding:6px 12px;border:1px solid #ddd;">%s</td>' .
+                '<td style="padding:6px 12px;border:1px solid #ddd;">%s</td>' .
+                '<td style="padding:6px 12px;border:1px solid #ddd;">%s</td>' .
+                '<td style="padding:6px 12px;border:1px solid #ddd;">%s</td>' .
+                '<td style="padding:6px 12px;border:1px solid #ddd;">%s</td>' .
+                '<td style="padding:6px 12px;border:1px solid #ddd;">%s</td>' .
+                '<td style="padding:6px 12px;border:1px solid #ddd;">%s</td>' .
+            '</tr>',
+            esc_html( $day_labels[ $day_key ] ?? ucfirst( $day_key ) ),
+            esc_html( $date_value ),
+            esc_html( $travel_hours ),
+            esc_html( $meeting_hours ),
+            esc_html( $billing ),
+            esc_html( $day_off ),
+            esc_html( $ltd ),
+            esc_html( $km_display ),
+            esc_html( $meals_display )
+        );
+    }
 
     $message  = '<p>' . esc_html__( 'A new expense submission has been received with the following summary:', 'nbnu-expense-form' ) . '</p>';
-    $message .= $table;
+    $message .= $summary_table;
+
+    if ( $day_rows ) {
+        $message .= '<h3 style="margin-top:24px;">' . esc_html__( 'Daily Summary', 'nbnu-expense-form' ) . '</h3>';
+        $message .= '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:12px 0;width:100%;">';
+        $message .= '<thead><tr>' .
+            '<th align="left" style="padding:6px 12px;background:#f9f9f9;border:1px solid #ddd;">' . esc_html__( 'Day', 'nbnu-expense-form' ) . '</th>' .
+            '<th align="left" style="padding:6px 12px;background:#f9f9f9;border:1px solid #ddd;">' . esc_html__( 'Date', 'nbnu-expense-form' ) . '</th>' .
+            '<th align="left" style="padding:6px 12px;background:#f9f9f9;border:1px solid #ddd;">' . esc_html__( 'Travel Hours', 'nbnu-expense-form' ) . '</th>' .
+            '<th align="left" style="padding:6px 12px;background:#f9f9f9;border:1px solid #ddd;">' . esc_html__( 'Meeting Hours', 'nbnu-expense-form' ) . '</th>' .
+            '<th align="left" style="padding:6px 12px;background:#f9f9f9;border:1px solid #ddd;">' . esc_html__( 'Employer Billing', 'nbnu-expense-form' ) . '</th>' .
+            '<th align="left" style="padding:6px 12px;background:#f9f9f9;border:1px solid #ddd;">' . esc_html__( 'Day Off', 'nbnu-expense-form' ) . '</th>' .
+            '<th align="left" style="padding:6px 12px;background:#f9f9f9;border:1px solid #ddd;">' . esc_html__( 'LTD/WHSCC', 'nbnu-expense-form' ) . '</th>' .
+            '<th align="left" style="padding:6px 12px;background:#f9f9f9;border:1px solid #ddd;">' . esc_html__( 'Mileage', 'nbnu-expense-form' ) . '</th>' .
+            '<th align="left" style="padding:6px 12px;background:#f9f9f9;border:1px solid #ddd;">' . esc_html__( 'Meals', 'nbnu-expense-form' ) . '</th>' .
+            '</tr></thead>';
+        $message .= '<tbody>' . $day_rows . '</tbody></table>';
+    }
+
     $message .= '<p><a style="display:inline-block;padding:10px 16px;background:#0073aa;color:#fff;text-decoration:none;border-radius:4px;" href="' . esc_url( $edit_link ) . '">' . esc_html__( 'View & Edit Submission', 'nbnu-expense-form' ) . '</a></p>';
 
     if ( ! empty( $form_data['uploaded_files'] ) ) {
         $message .= '<p><strong>' . esc_html__( 'Attached Files', 'nbnu-expense-form' ) . ':</strong></p><ul style="margin:0 0 16px 20px;">';
 
         foreach ( (array) $form_data['uploaded_files'] as $file_url ) {
-            $message .= '<li>' . esc_html( basename( $file_url ) ) . '</li>';
+            $message .= '<li><a href="' . esc_url( $file_url ) . '">' . esc_html( basename( $file_url ) ) . '</a></li>';
         }
 
         $message .= '</ul>';
