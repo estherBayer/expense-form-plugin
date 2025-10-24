@@ -358,21 +358,47 @@ function nbnu_expense_handle_uploads( $post_id ) {
     require_once ABSPATH . 'wp-admin/includes/media.php';
     require_once ABSPATH . 'wp-admin/includes/image.php';
 
+    $allowed_mimes = apply_filters(
+        'nbnu_expense_allowed_mimes',
+        [
+            'pdf'  => 'application/pdf',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'gif'  => 'image/gif',
+            'doc'  => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls'  => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]
+    );
+
     foreach ( $files['name'] as $index => $name ) {
         if ( empty( $name ) || UPLOAD_ERR_OK !== $files['error'][ $index ] ) {
             continue;
         }
 
-        $file_array = [
-            'name'     => sanitize_file_name( $name ),
+        $sanitized_name = sanitize_file_name( $name );
+        $file_array     = [
+            'name'     => $sanitized_name,
             'type'     => $files['type'][ $index ],
             'tmp_name' => $files['tmp_name'][ $index ],
             'error'    => 0,
             'size'     => (int) $files['size'][ $index ],
         ];
 
-        $overrides = [ 'test_form' => false ];
-        $result    = wp_handle_upload( $file_array, $overrides );
+        $file_check = wp_check_filetype_and_ext( $file_array['tmp_name'], $sanitized_name, $allowed_mimes );
+
+        if ( empty( $file_check['ext'] ) || empty( $file_check['type'] ) ) {
+            continue;
+        }
+
+        $overrides = [
+            'test_form' => false,
+            'mimes'     => $allowed_mimes,
+        ];
+
+        $result = wp_handle_upload( $file_array, $overrides );
 
         if ( isset( $result['error'] ) || empty( $result['file'] ) ) {
             continue;
@@ -380,17 +406,24 @@ function nbnu_expense_handle_uploads( $post_id ) {
 
         $attachment = [
             'post_mime_type' => $result['type'],
-            'post_title'     => sanitize_text_field( pathinfo( $file_array['name'], PATHINFO_FILENAME ) ),
+            'post_title'     => sanitize_text_field( pathinfo( $sanitized_name, PATHINFO_FILENAME ) ),
             'post_content'   => '',
             'post_status'    => 'inherit',
         ];
 
         $attachment_id = wp_insert_attachment( $attachment, $result['file'], $post_id );
 
-        if ( ! is_wp_error( $attachment_id ) ) {
-            $attachment_data = wp_generate_attachment_metadata( $attachment_id, $result['file'] );
-            wp_update_attachment_metadata( $attachment_id, $attachment_data );
-            $uploaded_files[] = wp_get_attachment_url( $attachment_id );
+        if ( is_wp_error( $attachment_id ) ) {
+            continue;
+        }
+
+        $attachment_data = wp_generate_attachment_metadata( $attachment_id, $result['file'] );
+        wp_update_attachment_metadata( $attachment_id, $attachment_data );
+
+        $file_url = wp_get_attachment_url( $attachment_id );
+
+        if ( $file_url ) {
+            $uploaded_files[] = esc_url_raw( $file_url );
         }
     }
 
