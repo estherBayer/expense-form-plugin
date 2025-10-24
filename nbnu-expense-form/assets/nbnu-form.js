@@ -20,7 +20,12 @@ jQuery(document).ready(function($) {
         }
     };
 
+    const STRINGS = (typeof nbnu_ajax !== 'undefined' && nbnu_ajax.strings) ? nbnu_ajax.strings : {};
+    const context = (typeof nbnu_ajax !== 'undefined' && nbnu_ajax.context) ? nbnu_ajax.context : ($('#nbnu-expense-form').data('context') || 'public');
+    const isAdminContext = context === 'admin';
+
     let isOutOfProvince = false;
+    let formErrorMessage = '';
 
     // Initialize date pickers
     $('.nbnu-date-picker').datepicker({
@@ -184,9 +189,86 @@ function toggleDateSections() {
         const hotel = parseFloat($('#form_calc_hotels_acc_total').text().replace(/[$,]/g, '')) || 0;
         const privateAcc = parseFloat($('#form_calc_private_acc_total').text().replace(/[$,]/g, '')) || 0;
         const other = parseFloat($('#form_calc_others_total').text().replace(/[$,]/g, '')) || 0;
-        
+
         const grandTotal = hoursPaid + mileage + meals + hotel + privateAcc + other;
         $('#form_calc_total_salary_expense_paid').text(formatCurrency(grandTotal));
+
+        syncHiddenTotals();
+    }
+
+    function syncHiddenTotals() {
+        $('#nbnu-total-hours-input').val($('#form_calc_total_hours_travel_meeting').text());
+        $('#nbnu-total-hours-billed-input').val($('#form_calc_Less_hours_billed_by_employer').text());
+        $('#nbnu-total-hours-paid-input').val($('#form_calc_hours_paid').text());
+        $('#nbnu-total-pay-input').val($('#form_calc_final_hours_paid').text());
+        $('#nbnu-total-kms-input').val($('#form_calc_total_kms_using_own_vehicle').text());
+        $('#nbnu-total-meals-input').val($('#form_calc_meals_total').text());
+        $('#nbnu-total-hotel-input').val($('#form_calc_hotels_acc_total').text());
+        $('#nbnu-total-private-input').val($('#form_calc_private_acc_total').text());
+        $('#nbnu-total-other-input').val($('#form_calc_others_total').text());
+        $('#nbnu-total-grand-input').val($('#form_calc_total_salary_expense_paid').text());
+    }
+
+    function populateAdminForm() {
+        if (!isAdminContext || typeof window.nbnuAdminSubmission === 'undefined') {
+            return;
+        }
+
+        const data = window.nbnuAdminSubmission;
+
+        Object.keys(data).forEach(function(key) {
+            const value = data[key];
+            const $fields = $('[name="' + key + '"]');
+
+            if (!$fields.length) {
+                return;
+            }
+
+            const fieldType = ($fields.attr('type') || '').toLowerCase();
+
+            if ($fields.length > 1 && fieldType === 'radio') {
+                $fields.each(function() {
+                    if ($(this).val() == value) { // eslint-disable-line eqeqeq
+                        $(this).prop('checked', true).trigger('change');
+                    }
+                });
+                return;
+            }
+
+            if (fieldType === 'checkbox') {
+                const shouldCheck = value === 'on' || value === 'yes' || value === true || value === 'true';
+                $fields.prop('checked', shouldCheck).trigger('change');
+                return;
+            }
+
+            if ($fields.is('select')) {
+                $fields.val(value).trigger('change');
+            } else {
+                $fields.val(value);
+            }
+        });
+
+        $('input[name="form_meeting_out_of_province"][value="' + (data.form_meeting_out_of_province || 'no') + '"]').prop('checked', true).trigger('change');
+        $('input[name="form_use_own_car"][value="' + (data.form_use_own_car || 'no') + '"]').prop('checked', true).trigger('change');
+        $('#form_provincial_or_local_office').val(data.form_provincial_or_local_office || '').trigger('change');
+
+        if (data.form_travel_destination_fredericton === 'on') {
+            $('#form_travel_destination_fredericton').prop('checked', true).trigger('change');
+        }
+
+        isOutOfProvince = (data.form_meeting_out_of_province || '').toLowerCase() === 'yes';
+
+        toggleDateSections();
+        calculateTotalHours();
+        calculateMileage();
+        calculateMeals();
+        calculateAccommodation();
+
+        if (typeof updateRowVisibility === 'function') {
+            updateRowVisibility();
+        }
+
+        syncHiddenTotals();
     }
 
 // Event handlers
@@ -249,20 +331,23 @@ $('input[name*="LTD_or_WHSCC"]').on('change', calculateTotalHours);
     // Form validation
     function validateForm() {
         $('.nbnu-form-validation-error, .nbnu-form-validation-error-select').removeClass('nbnu-form-validation-error nbnu-form-validation-error-select');
-        
+        $('.nbnu-numeric-input').removeAttr('aria-invalid');
+
         let isValid = true;
+        let numericError = false;
         const requiredFields = [
-            '#form_meeting', '#form_dates', '#form_name', '#form_address', 
-            '#form_employer', '#form_hourly_rate', '#date_month', '#date_day', 
+            '#form_meeting', '#form_dates', '#form_name', '#form_address',
+            '#form_employer', '#form_hourly_rate', '#date_month', '#date_day',
             '#date_year', '#form_classifications'
         ];
-        
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
         requiredFields.forEach(field => {
             const $field = $(field);
             if (!$field.val() || !$field.val().trim()) {
                 $field.addClass($field.is('select') ? 'nbnu-form-validation-error-select' : 'nbnu-form-validation-error');
                 if (!$field.is('select')) {
-                    $field.attr('placeholder', 'This field is required.');
+                    $field.attr('placeholder', STRINGS.requiredField || 'This field is required.');
                 }
                 isValid = false;
             }
@@ -271,12 +356,17 @@ $('input[name*="LTD_or_WHSCC"]').on('change', calculateTotalHours);
         // Validate email if local office selected
         if ($('#form_provincial_or_local_office').val() === 'Local Office') {
             const email = $('#form_provincial_or_local_office_email').val();
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!email || !emailPattern.test(email)) {
                 $('#form_provincial_or_local_office_email').addClass('nbnu-form-validation-error');
-                $('#form_provincial_or_local_office_email').attr('placeholder', 'Please enter a valid email');
+                $('#form_provincial_or_local_office_email').attr('placeholder', STRINGS.invalidEmail || 'Please enter a valid email');
                 isValid = false;
             }
+        }
+
+        const memberEmail = $('#form_member_email').val();
+        if (memberEmail && !emailPattern.test(memberEmail)) {
+            $('#form_member_email').addClass('nbnu-form-validation-error');
+            isValid = false;
         }
 
         // Validate at least one date is entered
@@ -286,51 +376,99 @@ $('input[name*="LTD_or_WHSCC"]').on('change', calculateTotalHours);
             isValid = false;
         }
 
+        $('.nbnu-numeric-input').each(function() {
+            const $field = $(this);
+            const value = $field.val();
+
+            if (value === '' || value === null) {
+                return;
+            }
+
+            let validNumber = true;
+
+            if (this.type === 'number') {
+                if ((this.validity && !this.validity.valid) || isNaN(parseFloat(value))) {
+                    validNumber = false;
+                }
+            } else {
+                const currencyAllowed = /[0-9\s.,$-]/g;
+                const plainAllowed = /[0-9\s.-]/g;
+                const pattern = $field.data('numericCurrency') ? currencyAllowed : plainAllowed;
+
+                if (value.replace(pattern, '') !== '') {
+                    validNumber = false;
+                } else {
+                    let normalized = value.replace(/\s+/g, '');
+                    if ($field.data('numericCurrency')) {
+                        normalized = normalized.replace(/[$,]/g, '');
+                    }
+
+                    if (normalized === '' || isNaN(parseFloat(normalized))) {
+                        validNumber = false;
+                    }
+                }
+            }
+
+            if (!validNumber) {
+                $field.addClass('nbnu-form-validation-error');
+                $field.attr('aria-invalid', 'true');
+                numericError = true;
+                isValid = false;
+            }
+        });
+
+        if (numericError) {
+            formErrorMessage = STRINGS.invalidNumber || 'Please enter a valid number.';
+        } else if (!isValid) {
+            formErrorMessage = STRINGS.globalError || $('#nbnu-global-error-message').text();
+        } else {
+            formErrorMessage = '';
+        }
+
         return isValid;
     }
 
     // Clear validation errors on focus
     $('input, select, textarea').on('focus', function() {
         $(this).removeClass('nbnu-form-validation-error nbnu-form-validation-error-select');
-        if ($(this).attr('placeholder') === 'This field is required.' || $(this).attr('placeholder') === 'Please enter a valid email') {
+        $(this).removeAttr('aria-invalid');
+        const placeholdersToClear = [
+            STRINGS.requiredField || 'This field is required.',
+            STRINGS.invalidEmail || 'Please enter a valid email',
+            STRINGS.invalidNumber || 'Please enter a valid number.'
+        ];
+        if (placeholdersToClear.includes($(this).attr('placeholder'))) {
             $(this).removeAttr('placeholder');
         }
     });
 
     // Form submission
     $('#nbnu-expense-form').on('submit', function(e) {
-        e.preventDefault();
-        
         if (!validateForm()) {
-            $('#nbnu-global-error-message').removeClass('nbnu-hidden');
+            e.preventDefault();
+            const message = formErrorMessage || STRINGS.globalError || $('#nbnu-global-error-message').text();
+            $('#nbnu-global-error-message').text(message).removeClass('nbnu-hidden');
             $('html, body').animate({
                 scrollTop: $('#nbnu-global-error-message').offset().top - 100
             }, 500);
             return;
         }
-        
+
         $('#nbnu-global-error-message').addClass('nbnu-hidden');
         $('#nbnu-spinning-icon-confirmation').show();
-        $('#nbnu-form-submit').prop('disabled', true).text('Submitting...');
-        
-        // Prepare form data
+        $('#nbnu-form-submit').prop('disabled', true).text(STRINGS.submitting || 'Submitting...');
+        syncHiddenTotals();
+
+        if (isAdminContext) {
+            return;
+        }
+
+        e.preventDefault();
+
         const formData = new FormData(this);
         formData.append('action', 'submit_nbnu_form');
         formData.append('nonce', nbnu_ajax.nonce);
-        
-        // Add calculated values
-        formData.append('form_calc_total_hours_travel_meeting', $('#form_calc_total_hours_travel_meeting').text());
-        formData.append('form_calc_Less_hours_billed_by_employer', $('#form_calc_Less_hours_billed_by_employer').text());
-        formData.append('form_calc_hours_paid', $('#form_calc_hours_paid').text());
-        formData.append('form_calc_final_hours_paid', $('#form_calc_final_hours_paid').text());
-        formData.append('form_calc_total_kms_using_own_vehicle', $('#form_calc_total_kms_using_own_vehicle').text());
-        formData.append('form_calc_meals_total', $('#form_calc_meals_total').text());
-        formData.append('form_calc_hotels_acc_total', $('#form_calc_hotels_acc_total').text());
-        formData.append('form_calc_private_acc_total', $('#form_calc_private_acc_total').text());
-        formData.append('form_calc_others_total', $('#form_calc_others_total').text());
-        formData.append('form_calc_total_salary_expense_paid', $('#form_calc_total_salary_expense_paid').text());
-        
-        // AJAX submission
+
         $.ajax({
             url: nbnu_ajax.ajax_url,
             type: 'POST',
@@ -339,31 +477,37 @@ $('input[name*="LTD_or_WHSCC"]').on('change', calculateTotalHours);
             contentType: false,
             success: function(response) {
                 $('#nbnu-spinning-icon-confirmation').hide();
-                $('#nbnu-form-submit').prop('disabled', false).text('Submit');
-                
+                $('#nbnu-form-submit').prop('disabled', false).text(STRINGS.submit || 'Submit');
+
                 if (response.success) {
-                    $('#nbnu-confirmation-message').text(response.data.message).removeClass('nbnu-hidden');
+                    let successMessage = response.data.message;
+                    if (response.data.submissionNumber) {
+                        successMessage += ' #' + response.data.submissionNumber;
+                    }
+
+                    $('#nbnu-confirmation-message').text(successMessage).removeClass('nbnu-hidden');
                     $('#nbnu-expense-form')[0].reset();
                     $('.nbnu-calculation-display').text('$0.00');
                     $('#form_calc_total_hours_travel_meeting, #form_calc_Less_hours_billed_by_employer, #form_calc_hours_paid').text('0.00');
-                    
-                    // Scroll to success message
+                    syncHiddenTotals();
+                    toggleDateSections();
+
                     $('html, body').animate({
                         scrollTop: $('#nbnu-confirmation-message').offset().top - 100
                     }, 500);
-                    
-                    // Hide success message after 10 seconds
+
                     setTimeout(function() {
                         $('#nbnu-confirmation-message').addClass('nbnu-hidden');
                     }, 10000);
                 } else {
-                    $('#nbnu-global-error-message').text('There was an error submitting your form. Please try again.').removeClass('nbnu-hidden');
+                    const errorMessage = (response.data && response.data.message) ? response.data.message : (STRINGS.genericError || 'There was an error submitting your form. Please try again.');
+                    $('#nbnu-global-error-message').text(errorMessage).removeClass('nbnu-hidden');
                 }
             },
             error: function() {
                 $('#nbnu-spinning-icon-confirmation').hide();
-                $('#nbnu-form-submit').prop('disabled', false).text('Submit');
-                $('#nbnu-global-error-message').text('There was an error submitting your form. Please try again.').removeClass('nbnu-hidden');
+                $('#nbnu-form-submit').prop('disabled', false).text(STRINGS.submit || 'Submit');
+                $('#nbnu-global-error-message').text(STRINGS.genericError || 'There was an error submitting your form. Please try again.').removeClass('nbnu-hidden');
             }
         });
     });
@@ -458,22 +602,35 @@ function updateRowVisibility() {
     }
 }
 
-// On page load, hide all individual cells' content
-$('.nbnu-day-off-section').addClass('nbnu-hidden');
-$('.nbnu-ltd-section').addClass('nbnu-hidden');
+    // On page load, hide all individual cells' content
+    $('.nbnu-day-off-section').addClass('nbnu-hidden');
+    $('.nbnu-ltd-section').addClass('nbnu-hidden');
 
-}); // This closes jQuery(document).ready(function($) {
-
-// File upload preview
-$('#form-files').on('change', function() {
-    const files = this.files;
-    const $preview = $('#nbnu-uploaded-files-preview');
-    $preview.empty();
-    
-    if (files.length > 0) {
-        $preview.append('<h4>Selected Files:</h4>');
-        Array.from(files).forEach(file => {
-            $preview.append(`<p>📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)</p>`);
+    if (isAdminContext) {
+        populateAdminForm();
+        $('.nbnu-print-button').on('click', function(e) {
+            e.preventDefault();
+            const url = $(this).data('print-url');
+            if (!url) {
+                return;
+            }
+            const win = window.open(url, '_blank');
+            if (win) {
+                win.focus();
+            }
         });
     }
-});
+
+    $('#form-files').on('change', function() {
+        const files = this.files;
+        const $preview = $('#nbnu-uploaded-files-preview');
+        $preview.empty();
+
+        if (files.length > 0) {
+            $preview.append(`<h4>${STRINGS.selectedFiles || 'Selected Files:'}</h4>`);
+            Array.from(files).forEach(file => {
+                $preview.append(`<p>📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)</p>`);
+            });
+        }
+    });
+}); // end document ready
